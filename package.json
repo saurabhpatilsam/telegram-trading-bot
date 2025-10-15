@@ -1,0 +1,16 @@
+{
+  "name": "telegram-trading-bot",
+  "version": "1.0.0",
+  "description": "Automated 24/7 Telegram Trading Signal Monitor with React Dashboard and AI Analysis",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "dev": "cd frontend && npm run dev",
+    "start": "cd frontend && npm run preview"
+  },
+  "keywords": ["telegram", "trading", "bot", "ai", "react", "fastapi"],
+  "author": "saurabhpatilsam",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

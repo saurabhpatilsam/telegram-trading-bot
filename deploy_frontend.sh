@@ -4,38 +4,60 @@ echo "🚀 Deploying Frontend to Vercel..."
 echo "=================================="
 echo ""
 
-# Navigate to frontend directory
-cd frontend
-
-# Check if logged in to Vercel
-echo "🔐 Checking Vercel authentication..."
-if ! vercel whoami > /dev/null 2>&1; then
-    echo "❌ Not logged in to Vercel"
-    echo "Please run: vercel login"
-    echo "Then run this script again"
+# Check if we're in the right directory
+if [ ! -f "api_server.py" ]; then
+    echo "❌ Please run this script from the project root directory"
     exit 1
 fi
 
-echo "✅ Logged in to Vercel as: $(vercel whoami)"
+echo "📁 Current directory: $(pwd)"
 echo ""
 
-# Set environment variables
-echo "⚙️  Setting environment variables..."
-echo "VITE_API_URL=https://telegram-bot-api-production-0d7e.up.railway.app" > .env.production
+# Navigate to frontend
+cd frontend
 
-# Deploy to Vercel
-echo "🚀 Deploying to Vercel..."
-vercel --prod --yes
+echo "🔧 Checking Vercel CLI..."
+if ! command -v vercel &> /dev/null; then
+    echo "📦 Installing Vercel CLI..."
+    npm install -g vercel
+fi
 
 echo ""
-echo "✅ Frontend deployment initiated!"
+echo "🎯 Deployment Options:"
 echo ""
-echo "🌐 Your app will be available at the URL shown above"
-echo "📊 Dashboard: https://vercel.com/dashboard"
+echo "Option 1: Vercel Dashboard (Recommended)"
+echo "  1. Go to: https://vercel.com/new"
+echo "  2. Import: telegram-trading-bot repository"
+echo "  3. Root Directory: frontend"
+echo "  4. Framework: Vite"
+echo "  5. Environment Variable:"
+echo "     VITE_API_URL=https://telegram-bot-api-production-0d7e.up.railway.app"
 echo ""
-echo "🎉 Complete system is now deployed:"
-echo "   Frontend: Vercel"
-echo "   Backend:  Railway (https://telegram-bot-api-production-0d7e.up.railway.app)"
-echo "   Database: Supabase"
+echo "Option 2: Vercel CLI"
+echo "  Run: vercel login"
+echo "  Then: vercel --prod"
 echo ""
-echo "Ready to monitor Telegram channels 24/7! 🚀"
+
+read -p "Do you want to try Vercel CLI deployment? (y/n): " -n 1 -r
+echo ""
+
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "🔐 Please login to Vercel first..."
+    vercel login
+    
+    echo ""
+    echo "🚀 Deploying to production..."
+    vercel --prod
+else
+    echo "📋 Please use the Vercel Dashboard option:"
+    echo "   https://vercel.com/new"
+    echo ""
+    echo "✅ Backend is ready at:"
+    echo "   https://telegram-bot-api-production-0d7e.up.railway.app"
+fi
+
+echo ""
+echo "🎉 After deployment, your complete system will be live!"
+echo "   Frontend: Your Vercel URL"
+echo "   Backend:  https://telegram-bot-api-production-0d7e.up.railway.app"
+echo "   Database: Supabase (configured)"

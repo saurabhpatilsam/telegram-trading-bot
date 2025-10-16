@@ -1,0 +1,12 @@
+Railway Deployment Trigger - Updated: 2025-10-16T02:30:00Z
+
+This file is updated to trigger a new Railway deployment with the latest Supabase integration code.
+
+Latest changes include:
+- Supabase PostgreSQL database integration
+- Enhanced error handling and logging
+- Health check endpoint
+- Multiple database connection fallbacks
+- Comprehensive debugging for "Failed to add channel" issue
+
+The backend should now connect to Supabase and properly handle channel creation requests.

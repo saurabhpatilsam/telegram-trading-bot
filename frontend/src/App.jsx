@@ -23,29 +23,40 @@ function App() {
 
   const fetchData = async () => {
     try {
-      setLoading(true)
+      console.log('Fetching data from API...')
       const [statsRes, channelsRes, signalsRes] = await Promise.all([
         api.getStats(),
         api.getChannels(),
         api.getSignals(null, 20)
       ])
       
+      console.log('API responses:', { statsRes, channelsRes, signalsRes })
+      
       setStats(statsRes.data)
       setChannels(channelsRes.data)
       setSignals(signalsRes.data)
       setError(null)
+      setLoading(false)
     } catch (err) {
       console.error('Error fetching data:', err)
-      setError('Failed to fetch data. Please check if the backend is running.')
-    } finally {
+      setError(`Failed to fetch data: ${err.message}`)
       setLoading(false)
     }
   }
 
   useEffect(() => {
+    console.log('App mounted, fetching initial data')
     fetchData()
-    const interval = setInterval(fetchData, 5000) // Refresh every 5 seconds
-    return () => clearInterval(interval)
+    
+    const interval = setInterval(() => {
+      console.log('Interval tick - fetching data')
+      fetchData()
+    }, 10000) // Increased to 10 seconds to reduce load
+    
+    return () => {
+      console.log('Cleaning up interval')
+      clearInterval(interval)
+    }
   }, [])
 
   const handleAddChannel = async (name, username) => {

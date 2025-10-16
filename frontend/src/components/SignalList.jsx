@@ -1,113 +1,125 @@
-import { TrendingUp, TrendingDown, Clock, Target, Shield } from 'lucide-react'
+import React from 'react'
+import { TrendingUp, TrendingDown, DollarSign, Shield, Target, Clock } from 'lucide-react'
+import { Card, CardContent, CardHeader } from './ui/card'
+import { Badge } from './ui/badge'
+import { formatDate } from '../lib/utils'
 
-export default function SignalList({ signals, selectedChannelId }) {
-  const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    return date.toLocaleString()
+function SignalList({ signals }) {
+  if (signals.length === 0) {
+    return (
+      <Card className="p-8 text-center">
+        <div className="text-muted-foreground mb-4">
+          <TrendingUp className="w-12 h-12 mx-auto" />
+        </div>
+        <h3 className="text-lg font-medium text-foreground mb-2">
+          No signals yet
+        </h3>
+        <p className="text-muted-foreground">
+          Trading signals will appear here when channels are active.
+        </p>
+      </Card>
+    )
+  }
+
+  const getSignalIcon = (action) => {
+    if (action === 'BUY' || action === 'LONG') {
+      return <TrendingUp className="h-4 w-4" />
+    }
+    if (action === 'SELL' || action === 'SHORT') {
+      return <TrendingDown className="h-4 w-4" />
+    }
+    return <TrendingUp className="h-4 w-4" />
+  }
+
+  const getSignalVariant = (action) => {
+    if (action === 'BUY' || action === 'LONG') return 'success'
+    if (action === 'SELL' || action === 'SHORT') return 'destructive'
+    return 'secondary'
   }
 
   return (
-    <div className="bg-white bg-opacity-5 backdrop-blur-lg rounded-xl border border-gray-700 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-700">
-        <h2 className="text-xl font-semibold text-white flex items-center">
-          <TrendingUp className="w-5 h-5 mr-2" />
-          Trading Signals {selectedChannelId && <span className="ml-2 text-sm text-gray-400">(Filtered)</span>}
-        </h2>
-      </div>
-
-      <div className="max-h-[600px] overflow-y-auto">
-        {signals.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">
-            No signals detected yet. Start monitoring channels to see signals.
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-700">
-            {signals.map((signal) => (
-              <div key={signal.id} className="p-6 hover:bg-white hover:bg-opacity-5 transition-colors">
-                {/* Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg ${
-                      signal.action === 'BUY' 
-                        ? 'bg-green-500 bg-opacity-20' 
-                        : 'bg-red-500 bg-opacity-20'
-                    }`}>
-                      {signal.action === 'BUY' ? (
-                        <TrendingUp className="w-5 h-5 text-green-400" />
-                      ) : (
-                        <TrendingDown className="w-5 h-5 text-red-400" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <h3 className={`text-lg font-bold ${
-                          signal.action === 'BUY' ? 'text-green-400' : 'text-red-400'
-                        }`}>
-                          {signal.action}
-                        </h3>
-                        <span className="text-xl font-bold text-white">{signal.instrument}</span>
-                      </div>
-                      <p className="text-sm text-gray-400">{signal.channel_name}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="text-right">
-                    <span className={`inline-block px-2 py-1 rounded text-xs ${
-                      signal.signal_type === 'image' 
-                        ? 'bg-purple-500 bg-opacity-20 text-purple-400' 
-                        : 'bg-blue-500 bg-opacity-20 text-blue-400'
-                    }`}>
-                      {signal.signal_type}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Signal Details */}
-                <div className="grid grid-cols-3 gap-4 mb-4">
-                  {signal.entry_price && signal.entry_price !== '' && (
-                    <div className="bg-white bg-opacity-5 rounded-lg p-3">
-                      <div className="flex items-center text-gray-400 text-xs mb-1">
-                        <Target className="w-3 h-3 mr-1" />
-                        Entry
-                      </div>
-                      <div className="text-white font-semibold">{signal.entry_price}</div>
-                    </div>
-                  )}
-
-                  {signal.stop_loss && signal.stop_loss !== '' && (
-                    <div className="bg-white bg-opacity-5 rounded-lg p-3">
-                      <div className="flex items-center text-gray-400 text-xs mb-1">
-                        <Shield className="w-3 h-3 mr-1" />
-                        Stop Loss
-                      </div>
-                      <div className="text-red-400 font-semibold">{signal.stop_loss}</div>
-                    </div>
-                  )}
-
-                  {signal.take_profits && signal.take_profits.length > 0 && (
-                    <div className="bg-white bg-opacity-5 rounded-lg p-3">
-                      <div className="flex items-center text-gray-400 text-xs mb-1">
-                        <TrendingUp className="w-3 h-3 mr-1" />
-                        Take Profit
-                      </div>
-                      <div className="text-green-400 font-semibold">
-                        {signal.take_profits.slice(0, 2).join(', ')}
-                        {signal.take_profits.length > 2 && ' ...'}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Timestamp */}
-                <div className="flex items-center text-xs text-gray-500">
-                  <Clock className="w-3 h-3 mr-1" />
-                  {formatDate(signal.created_at)}
-                </div>
+    <div className="space-y-4 max-h-[600px] overflow-y-auto">
+      {signals.map((signal, index) => (
+        <Card key={index} className="transition-all duration-200 hover:shadow-md">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Badge 
+                  variant={getSignalVariant(signal.action)}
+                  className="gap-1"
+                >
+                  {getSignalIcon(signal.action)}
+                  {signal.action || 'UNKNOWN'}
+                </Badge>
+                <h3 className="text-lg font-semibold text-foreground">
+                  {signal.instrument || 'Unknown Instrument'}
+                </h3>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              <div className="flex items-center text-sm text-muted-foreground gap-1">
+                <Clock className="h-4 w-4" />
+                <span>
+                  {signal.message_date ? formatDate(signal.message_date) : 'Unknown time'}
+                </span>
+              </div>
+            </div>
+          </CardHeader>
+          
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {signal.entry_price && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
+                    <DollarSign className="h-4 w-4" />
+                    <span>Entry Price</span>
+                  </div>
+                  <p className="text-lg font-semibold text-foreground">
+                    {signal.entry_price}
+                  </p>
+                </div>
+              )}
+              
+              {signal.stop_loss && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
+                    <Shield className="h-4 w-4" />
+                    <span>Stop Loss</span>
+                  </div>
+                  <p className="text-lg font-semibold text-red-600">
+                    {signal.stop_loss}
+                  </p>
+                </div>
+              )}
+              
+              {signal.take_profits && signal.take_profits.length > 0 && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
+                    <Target className="h-4 w-4" />
+                    <span>Take Profit</span>
+                  </div>
+                  <p className="text-lg font-semibold text-green-600">
+                    {Array.isArray(signal.take_profits) 
+                      ? signal.take_profits.join(', ') 
+                      : signal.take_profits}
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            {signal.raw_text && (
+              <div className="bg-muted rounded-lg p-4">
+                <p className="text-sm font-medium text-muted-foreground mb-2">
+                  Original Message
+                </p>
+                <p className="text-sm text-foreground whitespace-pre-wrap">
+                  {signal.raw_text}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
     </div>
   )
 }
+
+export default SignalList

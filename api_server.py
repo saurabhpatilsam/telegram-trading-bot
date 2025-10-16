@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from supabase_database import init_supabase_db, get_supabase_db, Channel, Signal, supabase_client
 from datetime import datetime
 import asyncio
@@ -80,6 +81,33 @@ class StatsResponse(BaseModel):
 async def root():
     return {"message": "Telegram Trading Bot API", "status": "running"}
 
+@app.get("/api/health")
+async def health_check(db: Session = Depends(get_supabase_db)):
+    """Health check endpoint to verify database connection"""
+    try:
+        # Test database connection
+        db.execute(text("SELECT 1"))
+        
+        # Get basic stats
+        channel_count = db.query(Channel).count()
+        signal_count = db.query(Signal).count()
+        
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "channels": channel_count,
+            "signals": signal_count,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            "status": "unhealthy", 
+            "database": "disconnected",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
 @app.get("/api/stats", response_model=StatsResponse)
 async def get_stats(db: Session = Depends(get_supabase_db)):
     """Get dashboard statistics"""
@@ -123,12 +151,19 @@ async def get_channels(db: Session = Depends(get_supabase_db)):
 async def create_channel(channel: ChannelCreate, db: Session = Depends(get_supabase_db)):
     """Add a new channel"""
     try:
+        logger.info(f"🔄 Attempting to create channel: {channel.name} ({channel.username})")
+        
+        # Test database connection first
+        db.execute(text("SELECT 1"))
+        logger.info("✅ Database connection verified")
+        
         # Check if channel already exists
         existing = db.query(Channel).filter(
             Channel.username == channel.username
         ).first()
         
         if existing:
+            logger.warning(f"⚠️ Channel already exists: {channel.username}")
             raise HTTPException(status_code=400, detail="Channel already exists")
         
         # Create new channel
@@ -138,19 +173,34 @@ async def create_channel(channel: ChannelCreate, db: Session = Depends(get_supab
             is_active=False,
             signal_count=0
         )
+        logger.info(f"🔄 Adding channel to database...")
         db.add(db_channel)
+        
+        logger.info(f"🔄 Committing transaction...")
         db.commit()
+        
+        logger.info(f"🔄 Refreshing channel data...")
         db.refresh(db_channel)
         
-        logger.info(f"✅ Channel created: {channel.name} ({channel.username})")
+        logger.info(f"✅ Channel created successfully: {channel.name} (ID: {db_channel.id})")
         return db_channel
         
-    except HTTPException:
+    except HTTPException as he:
+        logger.error(f"❌ HTTP Exception: {he.detail}")
         raise
     except Exception as e:
-        logger.error(f"Error creating channel: {e}")
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to create channel: {str(e)}")
+        logger.error(f"❌ Unexpected error creating channel: {type(e).__name__}: {str(e)}")
+        logger.error(f"❌ Channel data: name='{channel.name}', username='{channel.username}'")
+        try:
+            db.rollback()
+            logger.info("🔄 Transaction rolled back")
+        except Exception as rollback_error:
+            logger.error(f"❌ Rollback failed: {rollback_error}")
+        
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Database error: {type(e).__name__}: {str(e)}"
+        )
 
 @app.post("/api/channels/{channel_id}/start")
 async def start_channel(channel_id: int, db: Session = Depends(get_supabase_db)):

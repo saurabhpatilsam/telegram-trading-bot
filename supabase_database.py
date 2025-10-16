@@ -1,30 +1,58 @@
 """
 Supabase database configuration and models
 """
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Text, ARRAY
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Text, ARRAY, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import os
 
 # Supabase connection details
-SUPABASE_URL = "https://mfxrghawkoiemxgxfzti.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1meHJnaGF3a29pZW14Z3hmenRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxOTY1OTcsImV4cCI6MjA3NTc3MjU5N30.WmISPMi9nUvrpPnWoRigpG-woX_f4h4LC074_szLP5I"
+SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://mfxrghawkoiemxgxfzti.supabase.co')
+SUPABASE_KEY = os.getenv('SUPABASE_ANON_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1meHJnaGF3a29pZW14Z3hmenRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxOTY1OTcsImV4cCI6MjA3NTc3MjU5N30.WmISPMi9nUvrpPnWoRigpG-woX_f4h4LC074_szLP5I')
 
 # For PostgreSQL connection (Supabase uses PostgreSQL)
-DATABASE_URL = f"postgresql://postgres.mfxrghawkoiemxgxfzti:{os.getenv('SUPABASE_DB_PASSWORD', 'your_db_password')}@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+# Try multiple connection methods
+DATABASE_URLS = [
+    # Direct connection with service role key
+    f"postgresql://postgres.mfxrghawkoiemxgxfzti:{os.getenv('SUPABASE_DB_PASSWORD', 'Saurabh@123')}@aws-0-us-east-1.pooler.supabase.com:6543/postgres",
+    # Connection pooler
+    f"postgresql://postgres:{os.getenv('SUPABASE_DB_PASSWORD', 'Saurabh@123')}@db.mfxrghawkoiemxgxfzti.supabase.co:5432/postgres",
+    # Fallback to SQLite
+    "sqlite:///./trading_bot.db"
+]
 
-# Fallback to SQLite if Supabase connection fails
-try:
-    engine = create_engine(DATABASE_URL, echo=False)
-    # Test connection
-    engine.connect().close()
-    print("✅ Connected to Supabase PostgreSQL database")
-except Exception as e:
-    print(f"⚠️ Could not connect to Supabase: {e}")
-    print("📦 Falling back to SQLite database")
-    DATABASE_URL = "sqlite:///./trading_bot.db"
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# Try to connect to databases in order of preference
+engine = None
+connected_db = None
+
+for i, db_url in enumerate(DATABASE_URLS):
+    try:
+        print(f"🔄 Trying database connection {i+1}/{len(DATABASE_URLS)}...")
+        if "sqlite" in db_url:
+            test_engine = create_engine(db_url, connect_args={"check_same_thread": False}, echo=False)
+        else:
+            test_engine = create_engine(db_url, echo=False)
+        
+        # Test connection
+        with test_engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        
+        engine = test_engine
+        connected_db = "Supabase PostgreSQL" if "postgresql" in db_url else "SQLite"
+        print(f"✅ Connected to {connected_db} database")
+        break
+        
+    except Exception as e:
+        print(f"❌ Connection {i+1} failed: {e}")
+        continue
+
+if engine is None:
+    print("🚨 All database connections failed! Using SQLite as last resort.")
+    engine = create_engine("sqlite:///./trading_bot_fallback.db", connect_args={"check_same_thread": False})
+    connected_db = "SQLite (Fallback)"
+
+print(f"🗄️ Using database: {connected_db}")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
